@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "quiz_app/pubspec.yaml",
+      "use": "@vercel/static-build",
+      "config": { 
+        "distDir": "quiz_app/build/web"
+      }
+    }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "quiz_app/build/web/$1" }
+  ]
+}

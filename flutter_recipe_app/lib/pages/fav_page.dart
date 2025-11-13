@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_recipe_app/Model/recipe_model.dart';
 import 'package:flutter_recipe_app/services/auth_services.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
-
+import 'recipe_detail_page.dart';
 
 class FavoritesPage extends StatelessWidget {
   @override
@@ -34,6 +34,7 @@ class FavoritesPage extends StatelessWidget {
                 ),
               ),
             ),
+            pinned: true,
           ),
           if (favoriteRecipes.isEmpty)
             SliverFillRemaining(
@@ -81,90 +82,113 @@ class FavoritesPage extends StatelessWidget {
 
   Widget _buildFavoriteItem(
     BuildContext context,
-    Map<String, dynamic> recipe,
+    RecipeSummary recipe,
     AuthService authService,
   ) {
     return Card(
       margin: EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(16),
-              bottomLeft: Radius.circular(16),
-            ),
-            child: Image.network(
-              recipe['image'],
-              width: 100,
-              height: 100,
-              fit: BoxFit.cover,
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          recipe['title'],
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+      child: Container(
+        height: 120,
+        child: Row(
+          children: [
+            Container(
+              width: 120,
+              child: ClipRRect(
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  bottomLeft: Radius.circular(16),
+                ),
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            RecipeDetailPage(recipeId: recipe.id),
                       ),
-                      IconButton(
-                        icon: Icon(Icons.favorite, color: Colors.red),
-                        onPressed: () {
-                          authService.toggleFavorite(recipe);
-                        },
-                      ),
-                    ],
+                    );
+                  },
+                  child: Image.network(
+                    recipe.image,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey[200],
+                        child: Icon(Icons.fastfood, color: Colors.grey[400]),
+                      );
+                    },
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    recipe['description'],
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(Icons.timer, size: 14, color: Colors.grey),
-                      SizedBox(width: 4),
-                      Text(
-                        '${recipe['cookingTime']} mins',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      Icon(Icons.star, size: 14, color: Colors.orange),
-                      SizedBox(width: 4),
-                      Text(
-                        recipe['rating'].toString(),
-                        style: GoogleFonts.poppins(fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-        ],
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      RecipeDetailPage(recipeId: recipe.id),
+                                ),
+                              );
+                            },
+                            child: Text(
+                              recipe.title,
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            Icons.favorite,
+                            color: Colors.red,
+                            size: 20,
+                          ),
+                          onPressed: () {
+                            authService.toggleFavorite(recipe);
+                          },
+                        ),
+                      ],
+                    ),
+                    Text(
+                      recipe.category,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    Text(
+                      recipe.area,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.orange,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-    ).animate().fadeIn(duration: 300.ms).slideX(begin: 0.5);
+    );
   }
 }

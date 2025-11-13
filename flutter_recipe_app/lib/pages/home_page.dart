@@ -1,38 +1,20 @@
-// Continue from where it left off in home_page.dart
-
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:flutter_recipe_app/pages/fav_page.dart';
-import 'package:flutter_recipe_app/pages/prophile_page.dart';
+import 'package:flutter_recipe_app/Model/recipe_model.dart';
 import 'package:flutter_recipe_app/services/auth_services.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/recipe_service.dart';
+import 'fav_page.dart';
+import 'prophile_page.dart';
+import 'recipe_detail_page.dart';
 
 class HomePage extends StatefulWidget {
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage>
-    with SingleTickerProviderStateMixin {
+class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
-  late AnimationController _animationController;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: Duration(milliseconds: 500),
-    );
-    _animationController.forward();
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
 
   final List<Widget> _pages = [
     RecipeFeedPage(),
@@ -62,45 +44,22 @@ class _HomePageState extends State<HomePage>
           ),
         ],
       ),
-      body: AnimatedSwitcher(
-        duration: Duration(milliseconds: 300),
-        child: _pages[_currentIndex],
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
+      body: _pages[_currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() => _currentIndex = index);
+        },
+        selectedItemColor: Colors.orange,
+        unselectedItemColor: Colors.grey,
+        items: [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.favorite),
+            label: 'Favorites',
           ),
-          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-          child: BottomNavigationBar(
-            currentIndex: _currentIndex,
-            onTap: (index) {
-              setState(() => _currentIndex = index);
-            },
-            selectedItemColor: Colors.orange,
-            unselectedItemColor: Colors.grey,
-            showUnselectedLabels: true,
-            backgroundColor: Colors.white,
-            items: [
-              BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.favorite),
-                label: 'Favorites',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person),
-                label: 'Profile',
-              ),
-            ],
-          ),
-        ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+        ],
       ),
     );
   }
@@ -129,229 +88,299 @@ class _HomePageState extends State<HomePage>
   }
 }
 
-class RecipeFeedPage extends StatelessWidget {
-  final List<Map<String, dynamic>> _recipes = [
-    {
-      'id': '1',
-      'title': 'Spaghetti Carbonara',
-      'description': 'Creamy Italian pasta with eggs, cheese, and pancetta',
-      'image':
-          'https://as1.ftcdn.net/jpg/01/09/75/90/1000_F_109759077_SVp62TBuHkSn3UsGW4dBOm9R0ALVetYw.jpg',
-      'cookingTime': 25,
-      'difficulty': 'Medium',
-      'rating': 4.8,
-    },
-    {
-      'id': '2',
-      'title': 'Chicken Tikka Masala',
-      'description': 'Tender chicken in creamy spiced tomato sauce',
-      'image':
-          'https://images.unsplash.com/photo-1565557623262-b51c2513a641?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-      'cookingTime': 40,
-      'difficulty': 'Medium',
-      'rating': 4.6,
-    },
-    {
-      'id': '3',
-      'title': 'Avocado Toast',
-      'description': 'Healthy breakfast with smashed avocado on toast',
-      'image':
-          'https://images.unsplash.com/photo-1541519227354-08fa5d50c44d?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-      'cookingTime': 10,
-      'difficulty': 'Easy',
-      'rating': 4.3,
-    },
-    {
-      'id': '4',
-      'title': 'Beef Burger',
-      'description': 'Juicy beef patty with fresh vegetables and sauce',
-      'image':
-          'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-      'cookingTime': 20,
-      'difficulty': 'Easy',
-      'rating': 4.7,
-    },
-    {
-      'id': '5',
-      'title': 'Chocolate Cake',
-      'description': 'Rich and moist chocolate dessert',
-      'image':
-          'https://images.unsplash.com/photo-1578985545062-69928b1d9587?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-      'cookingTime': 60,
-      'difficulty': 'Hard',
-      'rating': 4.9,
-    },
-  ];
+class RecipeFeedPage extends StatefulWidget {
+  @override
+  State<RecipeFeedPage> createState() => _RecipeFeedPageState();
+}
+
+class _RecipeFeedPageState extends State<RecipeFeedPage> {
+  final TextEditingController _searchController = TextEditingController();
+  List<RecipeSummary> _recipes = [];
+  List<RecipeSummary> _filteredRecipes = [];
+  List<String> _categories = [];
+  String _selectedCategory = 'All';
+  bool _isLoading = true;
+  bool _isSearching = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      // Load categories
+      _categories = await RecipeService.getCategories();
+      _categories.insert(0, 'All');
+
+      // Load random recipes for initial display
+      await _loadRecipesByCategory('Beef'); // Default category
+    } catch (e) {
+      print('Error loading data: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadRecipesByCategory(String category) async {
+    if (category == 'All') {
+      // Load some random recipes
+      _recipes = [];
+      for (int i = 0; i < 5; i++) {
+        final recipe = await RecipeService.getRandomRecipe();
+        if (recipe != null) {
+          _recipes.add(
+            RecipeSummary(
+              id: recipe.id,
+              title: recipe.title,
+              category: recipe.category,
+              area: recipe.area,
+              image: recipe.image,
+            ),
+          );
+        }
+      }
+    } else {
+      _recipes = await RecipeService.getRecipesByCategory(category);
+    }
+
+    setState(() {
+      _filteredRecipes = _recipes;
+    });
+  }
+
+  Future<void> _searchRecipes(String query) async {
+    if (query.isEmpty) {
+      setState(() {
+        _filteredRecipes = _recipes;
+        _isSearching = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+    });
+
+    final results = await RecipeService.searchRecipes(query);
+
+    setState(() {
+      _filteredRecipes = results;
+      _isSearching = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return CustomScrollView(
-      slivers: [
-        SliverAppBar(
-          expandedHeight: 200,
-          flexibleSpace: FlexibleSpaceBar(
-            background: Image.network(
-              'https://images.unsplash.com/photo-1495521821757-a1efb6729352?ixlib=rb-4.0.3&auto=format&fit=crop&w=1926&q=80',
-              fit: BoxFit.cover,
+    return Column(
+      children: [
+        // Search Bar
+        Padding(
+          padding: EdgeInsets.all(16),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search recipes...',
+              prefixIcon: Icon(Icons.search),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        _searchRecipes('');
+                      },
+                    )
+                  : null,
             ),
+            onChanged: (value) {
+              _searchRecipes(value);
+            },
           ),
         ),
-        SliverPadding(
-          padding: EdgeInsets.all(16),
-          sliver: SliverGrid(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 0.8,
-            ),
-            delegate: SliverChildBuilderDelegate((context, index) {
-              return _buildRecipeCard(context, _recipes[index]);
-            }, childCount: _recipes.length),
+
+        // Category Filter
+        Container(
+          height: 50,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: _categories.length,
+            itemBuilder: (context, index) {
+              final category = _categories[index];
+              return Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: FilterChip(
+                  label: Text(category),
+                  selected: _selectedCategory == category,
+                  onSelected: (selected) {
+                    setState(() {
+                      _selectedCategory = category;
+                    });
+                    _loadRecipesByCategory(category);
+                  },
+                  selectedColor: Colors.orange,
+                  checkmarkColor: Colors.white,
+                ),
+              );
+            },
           ),
+        ),
+
+        // Recipes Grid
+        Expanded(
+          child: _isLoading
+              ? Center(child: CircularProgressIndicator())
+              : _isSearching
+              ? Center(child: CircularProgressIndicator())
+              : _filteredRecipes.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.search_off, size: 64, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text(
+                        'No recipes found',
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : CustomScrollView(
+                  slivers: [
+                    SliverPadding(
+                      padding: EdgeInsets.all(16),
+                      sliver: SliverGrid(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 0.8,
+                        ),
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          return _buildRecipeCard(
+                            context,
+                            _filteredRecipes[index],
+                          );
+                        }, childCount: _filteredRecipes.length),
+                      ),
+                    ),
+                  ],
+                ),
         ),
       ],
     );
   }
 
-  Widget _buildRecipeCard(BuildContext context, Map<String, dynamic> recipe) {
+  Widget _buildRecipeCard(BuildContext context, RecipeSummary recipe) {
     final authService = Provider.of<AuthService>(context);
-    final isFavorite = authService.isFavorite(recipe['id']);
+    final isFavorite = authService.isFavorite(recipe.id);
 
-    return Card(
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => RecipeDetailPage(recipeId: recipe.id),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                  child: Stack(
-                    children: [
-                      Image.network(
-                        recipe['image'],
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                      ),
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          padding: EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: IconButton(
-                            icon: Icon(
-                              isFavorite
-                                  ? Icons.favorite
-                                  : Icons.favorite_border,
-                              color: isFavorite ? Colors.red : Colors.grey,
-                              size: 20,
-                            ),
-                            onPressed: () {
-                              authService.toggleFavorite(recipe);
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        );
+      },
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                child: Stack(
                   children: [
-                    Text(
-                      recipe['title'],
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                    Image.network(
+                      recipe.image,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey[200],
+                          child: Icon(
+                            Icons.fastfood,
+                            color: Colors.grey[400],
+                            size: 40,
+                          ),
+                        );
+                      },
+                    ),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            isFavorite ? Icons.favorite : Icons.favorite_border,
+                            color: isFavorite ? Colors.red : Colors.grey,
+                            size: 20,
+                          ),
+                          onPressed: () {
+                            authService.toggleFavorite(recipe);
+                          },
+                        ),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      recipe['description'],
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.timer, size: 14, color: Colors.grey),
-                        SizedBox(width: 4),
-                        Text(
-                          '${recipe['cookingTime']} mins',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _getDifficultyColor(recipe['difficulty']),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            recipe['difficulty'],
-                            style: GoogleFonts.poppins(
-                              fontSize: 10,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.star, size: 14, color: Colors.orange),
-                        SizedBox(width: 4),
-                        Text(
-                          recipe['rating'].toString(),
-                          style: GoogleFonts.poppins(fontSize: 12),
-                        ),
-                      ],
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-        )
-        .animate()
-        .fade(duration: 500.ms)
-        .scale(begin: Offset(0.8, 0.8), duration: 500.ms);
-  }
-
-  Color _getDifficultyColor(String difficulty) {
-    switch (difficulty) {
-      case 'Easy':
-        return Colors.green;
-      case 'Medium':
-        return Colors.orange;
-      case 'Hard':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
+            ),
+            Padding(
+              padding: EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    recipe.title,
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    recipe.category,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    recipe.area,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.orange,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

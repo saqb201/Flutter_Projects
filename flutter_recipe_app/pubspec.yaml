@@ -41,6 +41,7 @@ dependencies:
   google_fonts: ^4.0.4
   shimmer: ^3.0.0
   liquid_pull_to_refresh: ^3.0.0
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:

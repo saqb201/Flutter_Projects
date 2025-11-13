@@ -1,14 +1,18 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_recipe_app/Model/recipe_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 
 class AuthService with ChangeNotifier {
   bool _isAuthenticated = false;
   Map<String, dynamic>? _currentUser;
-  List<Map<String, dynamic>> _favoriteRecipes = [];
+  List<RecipeSummary> _favoriteRecipes = [];
 
   bool get isAuthenticated => _isAuthenticated;
   Map<String, dynamic>? get currentUser => _currentUser;
-  List<Map<String, dynamic>> get favoriteRecipes => _favoriteRecipes;
+  List<RecipeSummary> get favoriteRecipes => _favoriteRecipes;
 
   AuthService() {
     _loadAuthState();
@@ -33,14 +37,19 @@ class AuthService with ChangeNotifier {
       }
     }
 
+    // Load favorites from storage
+    final favoritesJson = prefs.getStringList('favoriteRecipes') ?? [];
+    _favoriteRecipes = favoritesJson.map((json) {
+      final data = Map<String, dynamic>.from(jsonDecode(json));
+      return RecipeSummary.fromJson(data);
+    }).toList();
+
     notifyListeners();
   }
 
   Future<bool> login(String email, String password) async {
-    // Simulate API call delay
     await Future.delayed(Duration(milliseconds: 1500));
 
-    // Mock authentication - in real app, this would call your backend
     if (email.isNotEmpty && password.isNotEmpty) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isAuthenticated', true);
@@ -63,10 +72,8 @@ class AuthService with ChangeNotifier {
   }
 
   Future<bool> register(String name, String email, String password) async {
-    // Simulate API call delay
     await Future.delayed(Duration(milliseconds: 1500));
 
-    // Mock registration
     if (name.isNotEmpty && email.isNotEmpty && password.isNotEmpty) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isAuthenticated', true);
@@ -89,10 +96,7 @@ class AuthService with ChangeNotifier {
   }
 
   Future<bool> forgotPassword(String email) async {
-    // Simulate API call delay
     await Future.delayed(Duration(milliseconds: 1500));
-
-    // Mock password reset - always return true for demo
     return true;
   }
 
@@ -102,7 +106,6 @@ class AuthService with ChangeNotifier {
 
     _isAuthenticated = false;
     _currentUser = null;
-    _favoriteRecipes.clear();
 
     notifyListeners();
   }
@@ -114,19 +117,39 @@ class AuthService with ChangeNotifier {
     }
   }
 
-  void toggleFavorite(Map<String, dynamic> recipe) {
-    final isFavorite = _favoriteRecipes.any((r) => r['id'] == recipe['id']);
+  void toggleFavorite(RecipeSummary recipe) async {
+    final prefs = await SharedPreferences.getInstance();
+    final isFavorite = _favoriteRecipes.any((r) => r.id == recipe.id);
 
     if (isFavorite) {
-      _favoriteRecipes.removeWhere((r) => r['id'] == recipe['id']);
+      _favoriteRecipes.removeWhere((r) => r.id == recipe.id);
     } else {
       _favoriteRecipes.add(recipe);
     }
+
+    // Save to storage
+    final favoritesJson = _favoriteRecipes
+        .map((r) => jsonEncode(r.toJson()))
+        .toList();
+    await prefs.setStringList('favoriteRecipes', favoritesJson);
 
     notifyListeners();
   }
 
   bool isFavorite(String recipeId) {
-    return _favoriteRecipes.any((recipe) => recipe['id'] == recipeId);
+    return _favoriteRecipes.any((recipe) => recipe.id == recipeId);
+  }
+}
+
+// Helper method to convert RecipeSummary to JSON
+extension RecipeSummaryJson on RecipeSummary {
+  Map<String, dynamic> toJson() {
+    return {
+      'idMeal': id,
+      'strMeal': title,
+      'strCategory': category,
+      'strArea': area,
+      'strMealThumb': image,
+    };
   }
 }

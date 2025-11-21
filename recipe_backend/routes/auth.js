@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
 import User from '../models/User.js';
 import { protect } from '../middleware/auth.js';
-import { sendVerificationEmail } from '../utils/emailService.js';
+import { sendVerificationEmail, sendOtpEmail } from '../utils/emailService.js';
 import crypto from 'crypto';
 
 const router = express.Router();
@@ -121,31 +121,30 @@ router.post('/register', [
     });
 
     // -------------------------------------------------------
-    // ✅ NEW EMAIL VERIFICATION LOGIC (inserted correctly)
+    // ✅ NEW OTP VERIFICATION LOGIC
     // -------------------------------------------------------
+    let otp = '';
     try {
-      const emailVerifyToken = crypto.randomBytes(32).toString('hex');
-      const emailVerifyExpire = Date.now() + 60 * 60 * 1000; // 1 hour
+      // Generate 6-digit OTP
+      otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-      user.emailVerifyToken = crypto
-        .createHash('sha256')
-        .update(emailVerifyToken)
-        .digest('hex');
-
-      user.emailVerifyExpire = emailVerifyExpire;
+      user.otp = otp;
+      user.otpExpire = otpExpire;
 
       await user.save();
 
       // Try sending the email but DO NOT fail registration if email fails
       try {
-        await sendVerificationEmail(user, emailVerifyToken);
-        console.log("✅ Verification email sent to:", user.email);
+        await sendOtpEmail(user, otp);
+        console.log("✅ OTP email sent to:", user.email);
+        console.log("🔐 OTP for testing:", otp);
       } catch (emailError) {
-        console.error("❌ Email sending failed:", emailError);
+        console.error("❌ Email sending failed:", emailError.message);
       }
 
     } catch (emailSetupError) {
-      console.error("❌ Email setup error:", emailSetupError);
+      console.error("❌ Email setup error:", emailSetupError.message);
     }
     // -------------------------------------------------------
 
@@ -162,7 +161,8 @@ router.post('/register', [
         bio: user.bio,
         joinDate: user.joinDate
       },
-      message: 'Registration successful! Check your email to verify your account.'
+      message: 'Registration successful! Check your email for OTP to verify your account.',
+      otp: otp // Include OTP in response for testing (remove in production)
     });
 
   } catch (error) {

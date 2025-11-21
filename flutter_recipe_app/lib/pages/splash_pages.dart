@@ -37,6 +37,16 @@ class _SplashPageState extends State<SplashPage>
     _navigateToNext();
   }
 
+// @override
+//   void initState() {
+//     super.initState();
+//     _animationController.forward();
+
+//     // REPLACE with:
+//     WidgetsBinding.instance.addPostFrameCallback((_) {
+//       _navigateToNext();
+//     });
+//   }
   void _navigateToNext() async {
     await Future.delayed(Duration(seconds: 3));
 

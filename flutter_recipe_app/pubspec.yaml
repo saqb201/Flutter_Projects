@@ -42,6 +42,8 @@ dependencies:
   shimmer: ^3.0.0
   liquid_pull_to_refresh: ^3.0.0
   http: ^1.6.0
+  genui: ^0.5.1
+
 
 dev_dependencies:
   flutter_test:

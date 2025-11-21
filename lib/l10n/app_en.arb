@@ -1,0 +1,3 @@
+{
+  "voidTestBackendConnectionAsyncTryPrintTestingBackendConnectionTestHealthEndpointFinalHealthResponseAwaitHttpgetUriparsehttplocalhost5000apihealthPrintHealthEndpointHealthResponsestatusCodeHealthResponsebody": "void testBackendConnection() async {\r\n  //   try {\r\n  //     print('🧪 Testing backend connection...');\r\n\r\n  //     // Test health endpoint\r\n  //     final healthResponse = await http.get(\r\n  //       Uri.parse('http://localhost:5000/api/health'),\r\n  //     );\r\n  //     print(\r\n  //       '✅ Health endpoint: ${healthResponse.statusCode} - ${healthResponse.body}',\r\n  //     );"
+}

@@ -1,155 +1,358 @@
+// // lib/services/auth_services.dart
+// import 'dart:convert';
+// import 'package:flutter/foundation.dart';
+// import 'package:flutter/material.dart';
+// import 'package:http/http.dart' as http;
+// import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:flutter_recipe_app/Model/recipe_model.dart';
+
+// class AuthService with ChangeNotifier {
+//   // String get baseUrl {
+//   //   if (kIsWeb) {
+//   //     return 'http://localhost:5000/api'; // For web
+//   //   } else {
+//   //     return 'http://10.0.2.2:5000/api'; // For Android emulator
+//   //   }
+//   // }
+
+//   bool _isAuthenticated = false;
+//   Map<String, dynamic>? _currentUser;
+//   String? _token;
+//   List<Recipe> _favoriteRecipes = [];
+
+//   bool get isAuthenticated => _isAuthenticated;
+//   Map<String, dynamic>? get currentUser => _currentUser;
+//   List<Recipe> get favoriteRecipes => List.unmodifiable(_favoriteRecipes);
+
+//   // // ⚠️ THIS IS THE ONLY LINE YOU NEED TO CHANGE ⚠️
+//   static const String baseUrl = 'http://10.0.2.2:5000/api'; // Android Emulator
+//   // // For real phone: replace with your PC IP, e.g. 'http://192.168.1.105:5000/api'
+
+//   AuthService() {
+//     _loadAuthState();
+//   }
+
+//   // Add to AuthService.dart
+// Future<bool> resendVerification(String email) async {
+//   try {
+//     final response = await http.post(
+//       Uri.parse('$baseUrl/auth/resend-verification'),
+//       headers: {'Content-Type': 'application/json'},
+//       body: jsonEncode({'email': email}),
+//     );
+
+//     return response.statusCode == 200;
+//   } catch (e) {
+//     print('Resend verification error: $e');
+//     return false;
+//   }
+// }
+//   Future<void> _loadAuthState() async {
+//     final prefs = await SharedPreferences.getInstance();
+//     _token = prefs.getString('token');
+//     final userJson = prefs.getString('user');
+
+//     if (_token != null && userJson != null) {
+//       _isAuthenticated = true;
+//       _currentUser = jsonDecode(userJson);
+//       await refreshFavorites();
+//       notifyListeners();
+//     }
+//   }
+
+//   Future<bool> login(String email, String password) async {
+//     try {
+//       final response = await http.post(
+//         Uri.parse('$baseUrl/auth/login'),
+//         headers: {'Content-Type': 'application/json'},
+//         body: jsonEncode({'email': email, 'password': password}),
+//       );
+
+//       if (response.statusCode == 200) {
+//         final data = jsonDecode(response.body);
+//         await _saveAuthData(data['token'], data['user']);
+//         await refreshFavorites();
+//         return true;
+//       }
+//     } catch (e) {
+//       print('Login error: $e');
+//     }
+//     return false;
+//   }
+
+//   Future<bool> register(String name, String email, String password) async {
+//     try {
+//       final response = await http.post(
+//         Uri.parse('$baseUrl/auth/register'),
+//         headers: {'Content-Type': 'application/json'},
+//         body: jsonEncode({'name': name, 'email': email, 'password': password}),
+//       );
+
+//       if (response.statusCode == 201 || response.statusCode == 200) {
+//         return await login(email, password);
+//       }
+//     } catch (e) {
+//       print('Register error: $e');
+//     }
+//     return false;
+//   }
+
+//   Future<void> _saveAuthData(String token, Map<String, dynamic> user) async {
+//     final prefs = await SharedPreferences.getInstance();
+//     await prefs.setString('token', token);
+//     await prefs.setString('user', jsonEncode(user));
+//     _token = token;
+//     _currentUser = user;
+//     _isAuthenticated = true;
+//     notifyListeners();
+//   }
+
+//   Future<void> logout() async {
+//     final prefs = await SharedPreferences.getInstance();
+//     await prefs.clear();
+//     _token = null;
+//     _currentUser = null;
+//     _isAuthenticated = false;
+//     _favoriteRecipes.clear();
+//     notifyListeners();
+
+//   print('✅ User logged out successfully');
+//   }
+
+//   Map<String, String> getAuthHeaders() {
+//     return {
+//       'Content-Type': 'application/json',
+//       if (_token != null) 'Authorization': 'Bearer $_token',
+//     };
+//   }
+
+//   bool isFavorite(String id) => _favoriteRecipes.any((r) => r.id == id);
+
+//   Future<void> toggleFavorite(Recipe recipe) async {
+//     final already = isFavorite(recipe.id);
+//     try {
+//       if (already) {
+//         await http.delete(
+//           Uri.parse('$baseUrl/recipes/favorites/${recipe.id}'),
+//           headers: getAuthHeaders(),
+//         );
+//         _favoriteRecipes.removeWhere((r) => r.id == recipe.id);
+//       } else {
+//         await http.post(
+//           Uri.parse('$baseUrl/recipes/favorites'),
+//           headers: getAuthHeaders(),
+//           body: jsonEncode(recipe.toMap()),
+//         );
+//         _favoriteRecipes.add(recipe);
+//       }
+//       notifyListeners();
+//     } catch (e) {
+//       print('Toggle error: $e');
+//     }
+//   }
+
+//   Future<void> refreshFavorites() async {
+//     if (!_isAuthenticated) return;
+//     try {
+//       final response = await http.get(
+//         Uri.parse('$baseUrl/recipes/favorites'),
+//         headers: getAuthHeaders(),
+//       );
+//       if (response.statusCode == 200) {
+//         final data = jsonDecode(response.body);
+//         final list = data['data'] ?? data['favorites'] ?? data;
+//         _favoriteRecipes = (list as List)
+//             .map((item) => Recipe.fromMap(item['recipe'] ?? item))
+//             .toList();
+//         notifyListeners();
+//       }
+//     } catch (e) {
+//       print('Refresh favorites error: $e');
+//     }
+//   }
+
+//   Future<bool> forgotPassword(String email) async => false; // optional
+//   Future<void> updateProfile(Map<String, dynamic> updates) async {
+//     /* your code */
+//   }
+// }
+
+// lib/services/auth_services.dart
 import 'dart:convert';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_recipe_app/Model/recipe_model.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:flutter_recipe_app/Model/recipe_model.dart';
 
 class AuthService with ChangeNotifier {
   bool _isAuthenticated = false;
   Map<String, dynamic>? _currentUser;
-  List<RecipeSummary> _favoriteRecipes = [];
+  String? _token;
+  List<Recipe> _favoriteRecipes = [];
 
   bool get isAuthenticated => _isAuthenticated;
   Map<String, dynamic>? get currentUser => _currentUser;
-  List<RecipeSummary> get favoriteRecipes => _favoriteRecipes;
+  List<Recipe> get favoriteRecipes => List.unmodifiable(_favoriteRecipes);
+
+  static const String baseUrl = 'http://10.0.2.2:5000/api';
 
   AuthService() {
     _loadAuthState();
   }
 
+  Future<bool> resendVerification(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/resend-verification'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Resend verification error: $e');
+      return false;
+    }
+  }
+
   Future<void> _loadAuthState() async {
     final prefs = await SharedPreferences.getInstance();
-    _isAuthenticated = prefs.getBool('isAuthenticated') ?? false;
+    _token = prefs.getString('token');
+    final userJson = prefs.getString('user');
 
-    if (_isAuthenticated) {
-      final name = prefs.getString('userName');
-      final email = prefs.getString('userEmail');
-      final bio = prefs.getString('userBio');
-
-      if (name != null && email != null) {
-        _currentUser = {
-          'name': name,
-          'email': email,
-          'bio': bio ?? 'Food enthusiast who loves cooking!',
-          'joinDate': '2024',
-        };
-      }
+    if (_token != null && userJson != null) {
+      _isAuthenticated = true;
+      _currentUser = jsonDecode(userJson);
+      await refreshFavorites();
+      notifyListeners();
     }
-
-    // Load favorites from storage
-    final favoritesJson = prefs.getStringList('favoriteRecipes') ?? [];
-    _favoriteRecipes = favoritesJson.map((json) {
-      final data = Map<String, dynamic>.from(jsonDecode(json));
-      return RecipeSummary.fromJson(data);
-    }).toList();
-
-    notifyListeners();
   }
 
   Future<bool> login(String email, String password) async {
-    await Future.delayed(Duration(milliseconds: 1500));
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'password': password}),
+      );
 
-    if (email.isNotEmpty && password.isNotEmpty) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isAuthenticated', true);
-      await prefs.setString('userEmail', email);
-      await prefs.setString('userName', email.split('@')[0]);
-
-      _isAuthenticated = true;
-      _currentUser = {
-        'name': email.split('@')[0],
-        'email': email,
-        'bio': 'Food enthusiast who loves cooking!',
-        'joinDate': '2024',
-      };
-
-      notifyListeners();
-      return true;
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        await _saveAuthData(data['token'], data['user']);
+        await refreshFavorites();
+        return true;
+      }
+    } catch (e) {
+      print('Login error: $e');
     }
-
     return false;
   }
 
   Future<bool> register(String name, String email, String password) async {
-    await Future.delayed(Duration(milliseconds: 1500));
+    try {
+      print('🔄 Registering user: $email');
 
-    if (name.isNotEmpty && email.isNotEmpty && password.isNotEmpty) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isAuthenticated', true);
-      await prefs.setString('userEmail', email);
-      await prefs.setString('userName', name);
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'name': name, 'email': email, 'password': password}),
+      );
 
-      _isAuthenticated = true;
-      _currentUser = {
-        'name': name,
-        'email': email,
-        'bio': 'Food enthusiast who loves cooking!',
-        'joinDate': '2024',
-      };
+      print('📡 Register response: ${response.statusCode}');
+      print('📦 Response body: ${response.body}');
 
-      notifyListeners();
-      return true;
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        print('✅ Registration successful: ${data['message']}');
+        return true;
+      } else {
+        final errorData = jsonDecode(response.body);
+        print('❌ Registration failed: ${errorData['message']}');
+        return false;
+      }
+    } catch (e) {
+      print('💥 Register error: $e');
+      return false;
     }
+  } // ✅ REMOVE THE EXTRA BRACE AFTER THIS LINE
 
-    return false;
-  }
-
-  Future<bool> forgotPassword(String email) async {
-    await Future.delayed(Duration(milliseconds: 1500));
-    return true;
+  Future<void> _saveAuthData(String token, Map<String, dynamic> user) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('token', token);
+    await prefs.setString('user', jsonEncode(user));
+    _token = token;
+    _currentUser = user;
+    _isAuthenticated = true;
+    notifyListeners();
   }
 
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isAuthenticated', false);
-
-    _isAuthenticated = false;
+    await prefs.clear();
+    _token = null;
     _currentUser = null;
-
+    _isAuthenticated = false;
+    _favoriteRecipes.clear();
     notifyListeners();
+
+    print('✅ User logged out successfully');
   }
 
-  void updateProfile(Map<String, dynamic> updates) {
-    if (_currentUser != null) {
-      _currentUser!.addAll(updates);
-      notifyListeners();
-    }
-  }
-
-  void toggleFavorite(RecipeSummary recipe) async {
-    final prefs = await SharedPreferences.getInstance();
-    final isFavorite = _favoriteRecipes.any((r) => r.id == recipe.id);
-
-    if (isFavorite) {
-      _favoriteRecipes.removeWhere((r) => r.id == recipe.id);
-    } else {
-      _favoriteRecipes.add(recipe);
-    }
-
-    // Save to storage
-    final favoritesJson = _favoriteRecipes
-        .map((r) => jsonEncode(r.toJson()))
-        .toList();
-    await prefs.setStringList('favoriteRecipes', favoritesJson);
-
-    notifyListeners();
-  }
-
-  bool isFavorite(String recipeId) {
-    return _favoriteRecipes.any((recipe) => recipe.id == recipeId);
-  }
-}
-
-// Helper method to convert RecipeSummary to JSON
-extension RecipeSummaryJson on RecipeSummary {
-  Map<String, dynamic> toJson() {
+  Map<String, String> getAuthHeaders() {
     return {
-      'idMeal': id,
-      'strMeal': title,
-      'strCategory': category,
-      'strArea': area,
-      'strMealThumb': image,
+      'Content-Type': 'application/json',
+      if (_token != null) 'Authorization': 'Bearer $_token',
     };
   }
-}
+
+  bool isFavorite(String id) => _favoriteRecipes.any((r) => r.id == id);
+
+  Future<void> toggleFavorite(Recipe recipe) async {
+    final already = isFavorite(recipe.id);
+    try {
+      if (already) {
+        await http.delete(
+          Uri.parse('$baseUrl/recipes/favorites/${recipe.id}'),
+          headers: getAuthHeaders(),
+        );
+        _favoriteRecipes.removeWhere((r) => r.id == recipe.id);
+      } else {
+        await http.post(
+          Uri.parse('$baseUrl/recipes/favorites'),
+          headers: getAuthHeaders(),
+          body: jsonEncode(recipe.toMap()),
+        );
+        _favoriteRecipes.add(recipe);
+      }
+      notifyListeners();
+    } catch (e) {
+      print('Toggle error: $e');
+    }
+  }
+
+  Future<void> refreshFavorites() async {
+    if (!_isAuthenticated) return;
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/recipes/favorites'),
+        headers: getAuthHeaders(),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final list = data['data'] ?? data['favorites'] ?? data;
+        _favoriteRecipes = (list as List)
+            .map((item) => Recipe.fromMap(item['recipe'] ?? item))
+            .toList();
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Refresh favorites error: $e');
+    }
+  }
+
+  Future<bool> forgotPassword(String email) async => false;
+
+  Future<void> updateProfile(Map<String, dynamic> updates) async {
+    // Your profile update code here
+  }
+} // ✅ This should be the ONLY closing brace for the class

@@ -44,11 +44,12 @@
 //   });
 // };
 
+
 import nodemailer from 'nodemailer';
 
 const sendEmail = async (options) => {
   try {
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
       service: 'Gmail',
       auth: {
         user: process.env.EMAIL_USER,
@@ -73,7 +74,7 @@ const sendEmail = async (options) => {
 
 export const sendVerificationEmail = async (user, token) => {
   const verifyUrl = `${process.env.CLIENT_URL}/verify-email?token=${token}`;
-  
+
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #FF6B35;">Verify Your Email Address</h2>

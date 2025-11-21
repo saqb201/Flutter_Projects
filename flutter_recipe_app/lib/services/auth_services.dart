@@ -228,6 +228,29 @@ class AuthService with ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> verifyCode(String email, String code) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/verify-code'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'code': code}),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success']) {
+        // Save auth data if verification successful
+        await _saveAuthData(data['token'], data['user']);
+        await refreshFavorites();
+      }
+
+      return data;
+    } catch (e) {
+      print('Verify code error: $e');
+      return {'success': false, 'message': 'Verification failed'};
+    }
+  }
+
   Future<bool> login(String email, String password) async {
     try {
       final response = await http.post(

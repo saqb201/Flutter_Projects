@@ -271,10 +271,13 @@ router.get('/verify-email', async (req, res) => {
     user.emailVerifyExpire = undefined;
     await user.save();
 
-    res.json({
-      success: true,
-      message: 'Email verified successfully! You can now login.'
-    });
+    // res.json({
+    //   success: true,
+    //   message: 'Email verified successfully! You can now login.'
+    // });
+
+    // ✅ CHANGE THIS: Redirect to success page instead of JSON
+  res.redirect('/api/auth/verification-success');
   } catch (error) {
     console.error('Email verification error:', error);
     res.status(500).json({
@@ -493,4 +496,72 @@ router.get('/me', protect, async (req, res) => {
   });
 });
 
+// ... your existing routes above ...
+
+// ✅ ADD: Verification Success Page Route
+router.get('/verification-success', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Email Verified Successfully</title>
+        <style>
+            body { 
+                font-family: Arial, sans-serif; 
+                text-align: center; 
+                padding: 50px; 
+                background: linear-gradient(135deg, #FF6B35, #FF8E53);
+                color: white;
+            }
+            .container {
+                background: white;
+                padding: 40px;
+                border-radius: 20px;
+                color: #333;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+                max-width: 500px;
+                margin: 0 auto;
+            }
+            .success-icon {
+                font-size: 80px;
+                color: #4CAF50;
+                margin-bottom: 20px;
+            }
+            h1 { color: #4CAF50; margin-bottom: 20px; }
+            button { 
+                background: #FF6B35; 
+                color: white; 
+                border: none; 
+                padding: 15px 30px; 
+                border-radius: 10px; 
+                font-size: 16px; 
+                cursor: pointer;
+                margin-top: 20px;
+            }
+            button:hover { background: #E55A2B; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="success-icon">✓</div>
+            <h1>Email Verified Successfully!</h1>
+            <p>Your email has been verified. You can now login to the Recipe App.</p>
+            <p>Return to the app and login with your credentials.</p>
+            <button onclick="closePage()">Close This Page</button>
+        </div>
+        <script>
+            function closePage() {
+                window.close();
+            }
+            // Optional: Auto-close after 5 seconds
+            setTimeout(() => {
+                window.close();
+            }, 5000);
+        </script>
+    </body>
+    </html>
+  `);
+});
+
+// Export at the end
 export default router;
